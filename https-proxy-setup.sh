@@ -1,5 +1,20 @@
 #!/bin/bash
 
+# Script configuration:
+# - REGION is a free form string used in UI
+# - HOSTNAME is a symbolic host name. Used in httpd configuration, PAC files
+#   and in certificate file names.
+# - HTTPD_PORT ports httpd will listen on. All ports will serve TLS traffic
+#   only (NO insecure HTTP support).
+# - PROXY_PORTS ports squid will listen on.
+# - IFACE network interface to configure httpd and squid on
+# - DEBUG more detailed logging when set to true
+#
+# TLS certificates must be placed in the script directory and have following
+# names:
+# - ${HOSTNAME}.crt - certificate
+# - ${HOSTNAME}.chain.crt - certificate chain
+# - ${HOSTNAME}.key - private key
 REGION="US"
 HOSTNAME="proxy-us.causaldomain.com"
 HTTPD_PORTS=(443 80)
@@ -153,7 +168,7 @@ Group apache
 $(printf "Listen %s https\n" "${HTTPD_PORTS[@]}")
 SSLEngine on
 SSLCertificateFile ${CONF_CERT_PATH}
-SSLCertificateChainFile ${CERT_CHAIN_PATH}
+SSLCertificateChainFile ${CONF_CERT_CHAIN_PATH}
 SSLCertificateKeyFile ${CONF_CERT_KEY_PATH}
 SSLCipherSuite $(join ":" "${CIPHERS[@]}")
 SSLProtocol All -SSLv2 -SSLv3
