@@ -82,7 +82,7 @@ function LOG_doing() {
 function yum_install() {
 	local name="${1}"
 	LOG_doing "Installing ${name}"
-	sudo yum -y install "${name}" || exit 1
+	su -c "yum -y install \"${name}\"" || exit 1
 }
 
 function backup_file() {
