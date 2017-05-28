@@ -34,11 +34,25 @@ function backup_file() {
 	local name=$(basename "${file}")
 	local bakdir="${backups}/${dir}"
 	mkdir -p "${bakdir}"
+	chmod 700 "${bakdir}"
 	local bak=$(mktemp -p "${bakdir}" "${name}.bak.XXXX")
-	if ! cp "${file}" "${bak}"; then
-		LOG_err "Failed to backup \"${file}\" to \"${bak}\""
-		exit -1
-	fi
+	cp "${file}" "${bak}" || bail_out "Failed to backup \"${file}\" to \"${bak}\""
+}
+
+function write_file() {
+	local file="${1}"
+	tee "${file}" > /dev/null
+}
+
+function make_dir() {
+	dir="${1}"
+	mkdir -p "${dir}" || bail_out "Failed to create directory \"${dir}\""
+}
+
+function set_mode() {
+	mode="${1}"
+	file="${2}"
+	chmod "${mode}" "${file}" || bail_out "Failed to chmod ${mode} \"${file}\""
 }
 
 function install_package_apt_get() {
