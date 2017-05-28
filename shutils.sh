@@ -45,13 +45,13 @@ function write_file() {
 }
 
 function make_dir() {
-	dir="${1}"
+	local dir="${1}"
 	mkdir -p "${dir}" || bail_out "Failed to create directory \"${dir}\""
 }
 
 function set_mode() {
-	mode="${1}"
-	file="${2}"
+	local mode="${1}"
+	local file="${2}"
 	chmod "${mode}" "${file}" || bail_out "Failed to chmod ${mode} \"${file}\""
 }
 
