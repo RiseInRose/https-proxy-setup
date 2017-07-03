@@ -55,6 +55,12 @@ function make_dir() {
 	mkdir -p "${dir}" || bail_out "Failed to create directory \"${dir}\""
 }
 
+function real_dir() {
+	local dir="${1}"
+	make_dir "${dir}"
+	realpath "${dir}"
+}
+
 function set_mode() {
 	local mode="${1}"
 	local file="${2}"
