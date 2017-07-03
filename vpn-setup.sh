@@ -177,10 +177,10 @@ function configure_certificate_authority() {
 	#FIXME: Assuming that CA was already created othewise
 	if ! [[ -d "${CERT_AUTHORITY_DIR}" ]]; then
 		make_dir "${CERT_AUTHORITY_DIR}"
-		ca_dir=$(realpath "${CERT_AUTHORITY_DIR}")
+		local ca_dir=$(realpath "${CERT_AUTHORITY_DIR}")
 
 		LOG_doing "Creating root certificate authority"
-		root_ca="${ca_dir}/root"
+		local root_ca="${ca_dir}/root"
 		init_certificate_authority "${root_ca}" "root" "policy_strict"
 
 		openssl genrsa \
@@ -199,7 +199,7 @@ function configure_certificate_authority() {
 			-out "${root_ca}/certs/root-ca.cert.pem"
 
 		LOG_doing "Creating intermediate certificate authority"
-		intermediate_ca="${ca_dir}/intermediate"
+		local intermediate_ca="${ca_dir}/intermediate"
 		init_certificate_authority "${intermediate_ca}" "intermediate" "policy_loose"
 
 		openssl genrsa \
@@ -233,10 +233,56 @@ END_TEXT
 $(cat "${intermediate_ca}/certs/intermediate-ca.cert.pem")
 $(cat "${root_ca}/certs/root-ca.cert.pem")
 END_TEXT
+
 	fi
+}
+
+function issue_certificate_with_name() {
+	local name="${1}"
+	local private_key="${CERT_AUTHORITY_DIR}/intermediate/private/${name}.key.pem"
+	local certificate="${CERT_AUTHORITY_DIR}/intermediate/certs/${name}.cert.pem"
+	if [[ ! -f ${private_key} ]]; then
+		LOG_doing "Creating private key for \"${name}\""
+		openssl genrsa \
+			-out "${private_key}" \
+			2048
+		set_mode 400 "${private_key}"
+	fi
+
+	if [[ ! -f ${certificate} ]]; then
+		LOG_doing "Creating certificate signing request for \"${name}\""
+		openssl req \
+			-config "${CERT_AUTHORITY_DIR}/intermediate/openssl.cnf" \
+			-subj "/C=US/ST=State/L=Locality/O=Organization/OU=Unit/CN=${name}/emailAddress=email@address.domain" \
+			-key "${private_key}" \
+			-new -sha256 \
+			-out "${CERT_AUTHORITY_DIR}/intermediate/csr/${name}.csr.pem"
+
+		LOG_doing "Signing certificate signing request for \"${name}\""
+		local extension="server_cert" # Use "usr_cert" for user auth
+		openssl ca \
+			-config "${CERT_AUTHORITY_DIR}/intermediate/openssl.cnf" \
+			-batch \
+			-extensions "${extension}" \
+			-days 375 -notext -md sha256 \
+			-passin "file:${CERT_AUTHORITY_DIR}/intermediate/private/intermediate-ca.key.pem.pass" \
+			-in "${CERT_AUTHORITY_DIR}/intermediate/csr/${name}.csr.pem" \
+			-out "${certificate}"
+		chmod 444 "${certificate}"
+	fi
+	LOG_doing "Verifying certificate for \"${name}\""
+	openssl verify \
+		-CAfile "${CERT_AUTHORITY_DIR}/intermediate/certs/intermediate-ca-chain.cert.pem" \
+		"${certificate}" || bail_out "Certificate for \"${name}\" can't be verified"
+
+	LOG_info "Certificate files:"
+	LOG_info "\"${certificate}\" (certificate)"
+	LOG_info "\"${private_key}\" (private key)"
+	LOG_info "\"${CERT_AUTHORITY_DIR}/intermediate/certs/intermediate-ca-chain.cert.pem\" (issuing authority certificate)"
 }
 
 install_package openvpn
 
 configure_ip_forwarding
 configure_certificate_authority
+issue_certificate_with_name "vpn-server"

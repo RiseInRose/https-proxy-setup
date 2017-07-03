@@ -14,6 +14,12 @@ function LOG_err() {
 	LOG_msg "${RED}Error: ${1}${NC}"
 }
 
+function LOG_info() {
+	local YELLOW="\033[0;33m"
+	local NC="\033[0m"
+	LOG_msg "${YELLOW}${1}${NC}"
+}
+
 function bail_out() {
 	LOG_err "${1}"
 	exit -1
